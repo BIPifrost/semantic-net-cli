@@ -1,0 +1,25 @@
+{
+  "global": {
+    "provider": "your_provider",
+    "api_format": "openai",
+    "model": "your_model_name",
+    "api_key": "your_api_key",
+    "base_url": "https://your-llm-endpoint.example.com",
+    "temperature": 0.2,
+    "max_tokens": 1200,
+    "thinking_enabled": false,
+    "reasoning_effort": null,
+    "stream": false,
+    "response_format": "json_object"
+  },
+  "agents": {
+    "topology_dependency": {},
+    "link_quality": {},
+    "routing_forwarding": {},
+    "node_bottleneck": {},
+    "flow_impact": {},
+    "global_state": {},
+    "fault_domain": {},
+    "closed_loop_control": {}
+  }
+}

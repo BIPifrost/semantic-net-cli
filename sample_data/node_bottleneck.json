@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "snapshot_id": "node-bottleneck-001"
+  },
+  "nodes": [
+    {
+      "id": "node-core",
+      "type": "router",
+      "role": "core",
+      "semantic_state": "abnormal",
+      "metrics": {
+        "latency": null,
+        "loss": null,
+        "utilization": 0.95,
+        "cpu": 0.97,
+        "queue": 0.88
+      }
+    },
+    {
+      "id": "node-edge",
+      "type": "switch",
+      "role": "edge",
+      "semantic_state": "normal",
+      "metrics": {
+        "latency": null,
+        "loss": null,
+        "utilization": 0.30,
+        "cpu": 0.22,
+        "queue": 0.05
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "link-core-edge",
+      "source": "node-core",
+      "target": "node-edge",
+      "type": "wired",
+      "semantic_state": "normal",
+      "metrics": {
+        "latency": 6.0,
+        "loss": 0.0,
+        "utilization": 0.55,
+        "cpu": null,
+        "queue": null
+      }
+    }
+  ],
+  "paths": [
+    {
+      "id": "path-core-edge",
+      "node_ids": ["node-core", "node-edge"],
+      "link_ids": ["link-core-edge"],
+      "semantic_state": "degraded"
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow-core-edge",
+      "source": "node-core",
+      "target": "node-edge",
+      "path_id": "path-core-edge",
+      "semantic_state": "degraded",
+      "importance": "critical"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "metadata": {
+    "snapshot_id": "flow-impacted-001"
+  },
+  "nodes": [
+    {
+      "id": "node-src",
+      "type": "host",
+      "role": "edge",
+      "semantic_state": "normal",
+      "metrics": {
+        "latency": null,
+        "loss": null,
+        "utilization": 0.20,
+        "cpu": 0.18,
+        "queue": 0.02
+      }
+    },
+    {
+      "id": "node-mid",
+      "type": "switch",
+      "role": "aggregation",
+      "semantic_state": "degraded",
+      "metrics": {
+        "latency": null,
+        "loss": null,
+        "utilization": 0.82,
+        "cpu": 0.78,
+        "queue": 0.52
+      }
+    },
+    {
+      "id": "node-dst",
+      "type": "host",
+      "role": "edge",
+      "semantic_state": "normal",
+      "metrics": {
+        "latency": null,
+        "loss": null,
+        "utilization": 0.24,
+        "cpu": 0.17,
+        "queue": 0.03
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "link-sm",
+      "source": "node-src",
+      "target": "node-mid",
+      "type": "wired",
+      "semantic_state": "normal",
+      "metrics": {
+        "latency": 5.0,
+        "loss": 0.0,
+        "utilization": 0.48,
+        "cpu": null,
+        "queue": null
+      }
+    },
+    {
+      "id": "link-md",
+      "source": "node-mid",
+      "target": "node-dst",
+      "type": "wired",
+      "semantic_state": "degraded",
+      "metrics": {
+        "latency": 18.0,
+        "loss": 0.01,
+        "utilization": 0.87,
+        "cpu": null,
+        "queue": null
+      }
+    }
+  ],
+  "paths": [
+    {
+      "id": "path-smd",
+      "node_ids": ["node-src", "node-mid", "node-dst"],
+      "link_ids": ["link-sm", "link-md"],
+      "semantic_state": "degraded"
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow-smd",
+      "source": "node-src",
+      "target": "node-dst",
+      "path_id": "path-smd",
+      "semantic_state": "degraded",
+      "importance": "critical"
+    }
+  ]
+}

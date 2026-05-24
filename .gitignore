@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+pytest-cache-files-*/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local workspaces / tool state
+.claude/
+
+# Local configuration
+config/llm_config.local.json
+tests/workflow/runtime_llm_config.json
+tests/workflow/llm_config_*.json
+tests/runtime_cli_*.json
+*.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Local planning / private docs
+plan.md
+project_spec.md
+
+# Packaging artifacts
+*.egg-info/
+build/
+dist/
