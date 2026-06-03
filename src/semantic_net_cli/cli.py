@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
-from pydantic import ValidationError
-
-from semantic_net_cli.models.schema import SemanticSnapshot
+from semantic_net_cli.io.jsonl_loader import load_twin_graph_jsonl
 from semantic_net_cli.reporting.formatter import format_report
 from semantic_net_cli.workflow.graph import build_workflow
 
@@ -26,20 +23,17 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        snapshot = _load_snapshot(Path(args.snapshot))
+        twin_graph = _load_twin_graph(Path(args.snapshot))
     except FileNotFoundError:
-        print(f"Snapshot file not found: {args.snapshot}", file=sys.stderr)
+        print(f"JSONL semantic twin file not found: {args.snapshot}", file=sys.stderr)
         return 1
-    except ValidationError as exc:
-        print(f"Invalid snapshot schema: {exc}", file=sys.stderr)
-        return 2
-    except json.JSONDecodeError as exc:
-        print(f"Invalid snapshot JSON: {exc}", file=sys.stderr)
+    except ValueError as exc:
+        print(f"Invalid JSONL semantic twin input: {exc}", file=sys.stderr)
         return 2
 
     try:
         workflow = build_workflow(str(config_path))
-        final_result = workflow.invoke({"snapshot": snapshot})
+        final_result = workflow.invoke({"twin_graph": twin_graph, "history_context": {}})
         print(format_report(final_result))
         return 0
     except Exception as exc:
@@ -52,9 +46,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         prog="semantic-net-cli",
-        description="Run the semantic network multi-agent analysis workflow on one JSON snapshot.",
+        description="Run the semantic network multi-agent analysis workflow on one JSONL semantic twin graph.",
     )
-    parser.add_argument("snapshot", help="Path to the semantic snapshot JSON file.")
+    parser.add_argument("snapshot", help="Path to the semantic twin JSONL file.")
     parser.add_argument(
         "--config",
         default="config/llm_config.example.json",
@@ -63,11 +57,10 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _load_snapshot(path: Path) -> SemanticSnapshot:
-    """Load and validate one semantic snapshot from disk."""
+def _load_twin_graph(path: Path):
+    """Load and validate one semantic twin graph from disk."""
 
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return SemanticSnapshot.model_validate(data)
+    return load_twin_graph_jsonl(path)
 
 
 if __name__ == "__main__":
