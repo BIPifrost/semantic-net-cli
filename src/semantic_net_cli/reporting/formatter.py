@@ -1,12 +1,13 @@
-"""CLI report formatter for semantic network analysis results."""
+"""CLI report formatter for semantic twin two-layer analysis results."""
 
 from __future__ import annotations
 
 from semantic_net_cli.reporting.sections import (
-    build_closed_loop_control_section,
-    build_global_state_section,
+    build_cause_set_section,
     build_input_summary_section,
-    build_root_cause_section,
+    build_intermediate_fact_set_section,
+    build_network_state_section,
+    build_optimization_action_section,
 )
 
 
@@ -15,8 +16,9 @@ def format_report(final_result: dict) -> str:
 
     sections = [
         build_input_summary_section(final_result),
-        build_global_state_section(final_result),
-        build_root_cause_section(final_result),
-        build_closed_loop_control_section(final_result),
+        build_intermediate_fact_set_section(final_result),
+        build_network_state_section(final_result),
+        build_cause_set_section(final_result),
+        build_optimization_action_section(final_result),
     ]
     return "\n\n".join(sections)

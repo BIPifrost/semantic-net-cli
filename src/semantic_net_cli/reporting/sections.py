@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 
 def build_input_summary_section(final_result: dict) -> str:
     """Build the Input Summary section."""
@@ -9,63 +11,84 @@ def build_input_summary_section(final_result: dict) -> str:
     summary = final_result["input_summary"]
     lines = [
         "Input Summary",
-        f"snapshot_id: {summary['snapshot_id']}",
+        f"object_count: {summary['object_count']}",
         f"node_count: {summary['node_count']}",
-        f"link_count: {summary['link_count']}",
-        f"path_count: {summary['path_count']}",
-        f"flow_count: {summary['flow_count']}",
+        f"interface_count: {summary['interface_count']}",
+        f"channel_count: {summary['channel_count']}",
     ]
     return "\n".join(lines)
 
 
-def build_global_state_section(final_result: dict) -> str:
-    """Build the Global Semantic State section."""
+def build_intermediate_fact_set_section(final_result: dict) -> str:
+    """Build the Intermediate Semantic Fact Set section."""
 
-    section = final_result["global_semantic_state"]
+    fact_set = final_result["intermediate_fact_set"]
     lines = [
-        "Global Semantic State",
-        f"status: {section['status']}",
-        f"summary: {section['summary']}",
-        "key_evidence:",
+        "Intermediate Semantic Fact Set",
+        f"fact_set_id: {fact_set.fact_set_id}",
+        f"topology_fact_count: {len(fact_set.topology_facts)}",
+        f"routing_fact_count: {len(fact_set.routing_facts)}",
+        f"traffic_fact_count: {len(fact_set.traffic_facts)}",
+        f"performance_fact_count: {len(fact_set.performance_facts)}",
+        f"node_semantic_fact_count: {len(fact_set.node_semantic_facts)}",
+        "facts:",
     ]
-    lines.extend(_format_evidence(section.get("key_evidence", [])))
+    if not fact_set.all_facts:
+        lines.append("- none")
+    for fact in fact_set.all_facts:
+        lines.append(
+            f"- {fact.fact_id} [{fact.category}/{fact.fact_type}] {fact.subject_id}: {fact.summary}"
+        )
     return "\n".join(lines)
 
 
-def build_root_cause_section(final_result: dict) -> str:
-    """Build the Semantic Root-Cause Diagnosis section."""
+def build_network_state_section(final_result: dict) -> str:
+    """Build the Current Network State S_k section."""
 
-    section = final_result["semantic_root_cause"]
-    secondary = section.get("secondary_causes", [])
+    state = final_result["network_state"]
     lines = [
-        "Semantic Root-Cause Diagnosis",
-        f"primary_cause: {section['primary_cause']}",
-        f"secondary_causes: {', '.join(secondary) if secondary else 'none'}",
-        f"reasoning_summary: {section['reasoning_summary']}",
-        "key_evidence:",
+        "Current Network State S_k",
+        f"state_id: {state.state_id}",
+        f"status: {state.status}",
+        f"summary: {state.summary}",
+        f"key_fact_ids: {_join_or_none(state.key_fact_ids)}",
+        f"confidence: {state.confidence}",
     ]
-    lines.extend(_format_evidence(section.get("key_evidence", [])))
     return "\n".join(lines)
 
 
-def build_closed_loop_control_section(final_result: dict) -> str:
-    """Build the Closed-Loop Semantic Control section."""
+def build_cause_set_section(final_result: dict) -> str:
+    """Build the Cause Set C_k section."""
 
-    section = final_result["closed_loop_control"]
-    candidate_actions = section.get("candidate_actions", [])
+    cause_set = final_result["cause_set"]
     lines = [
-        "Closed-Loop Semantic Control",
-        f"recommended_action: {section['recommended_action']}",
-        f"candidate_actions: {' | '.join(candidate_actions) if candidate_actions else 'none'}",
-        f"target_objects: {', '.join(section.get('target_objects', [])) if section.get('target_objects') else 'none'}",
-        f"control_reasoning: {section['control_reasoning']}",
+        "Cause Set C_k",
+        f"cause_set_id: {cause_set.cause_set_id}",
+        f"primary_cause: {cause_set.primary_cause}",
+        f"causes: {_join_or_none(cause_set.causes)}",
+        f"evidence_fact_ids: {_join_or_none(cause_set.evidence_fact_ids)}",
+        f"confidence: {cause_set.confidence}",
     ]
     return "\n".join(lines)
 
 
-def _format_evidence(evidence: list[dict]) -> list[str]:
-    """Format key evidence lines for terminal output."""
+def build_optimization_action_section(final_result: dict) -> str:
+    """Build the Optimization Action U_k section."""
 
-    if not evidence:
-        return ["- none"]
-    return [f"- {item['id']}: {item['reason']}" for item in evidence]
+    action = final_result["optimization_action"]
+    lines = [
+        "Optimization Action U_k",
+        f"action_id: {action.action_id}",
+        f"recommended_action: {action.recommended_action}",
+        f"target_object_ids: {_join_or_none(action.target_object_ids)}",
+        f"candidate_actions: {_join_or_none(action.candidate_actions, separator=' | ')}",
+        f"reasoning: {action.reasoning}",
+        f"confidence: {action.confidence}",
+    ]
+    return "\n".join(lines)
+
+
+def _join_or_none(items: list[Any], separator: str = ", ") -> str:
+    if not items:
+        return "none"
+    return separator.join(str(item) for item in items)

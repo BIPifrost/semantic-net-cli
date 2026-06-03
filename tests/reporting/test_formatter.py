@@ -2,67 +2,71 @@
 
 from __future__ import annotations
 
+from semantic_net_cli.models.facts import IntermediateFactSet, SemanticFact
+from semantic_net_cli.models.task_outputs import CauseSet, NetworkState, OptimizationAction
+
 
 def make_final_result() -> dict:
+    fact = SemanticFact(
+        fact_id="performance-1",
+        category="performance",
+        fact_type="threshold_violation",
+        subject_id="c_wifi_ap1",
+        summary="c_wifi_ap1 shows degraded wireless performance.",
+        evidence=[{"id": "c_wifi_ap1", "reason": "loss_rate and retransmission_rate are elevated"}],
+        confidence=0.86,
+    )
     return {
         "input_summary": {
-            "snapshot_id": "demo-001",
+            "object_count": 6,
             "node_count": 3,
-            "link_count": 2,
-            "path_count": 1,
-            "flow_count": 1,
+            "interface_count": 2,
+            "channel_count": 1,
         },
-        "global_semantic_state": {
-            "status": "abnormal",
-            "summary": "The whole network is abnormal because the aggregation segment is overloaded.",
-            "key_evidence": [
-                {"id": "node-b", "reason": "aggregation node is overloaded"},
-                {"id": "flow-1", "reason": "critical flow is impacted"},
-            ],
-        },
-        "semantic_root_cause": {
-            "primary_cause": "Primary fault domain is aggregation-node overload at node-b.",
-            "secondary_causes": ["Link link-ab degradation is a secondary propagated symptom."],
-            "reasoning_summary": "Node overload at the aggregation layer is the dominant cause and drives flow degradation.",
-            "key_evidence": [
-                {"id": "node-b", "reason": "dominant abnormal object across agents"},
-                {"id": "link-ab", "reason": "degradation appears downstream of node-b"},
-            ],
-        },
-        "closed_loop_control": {
-            "recommended_action": "Relieve load on node-b and protect flow-1 first.",
-            "candidate_actions": [
-                "Relieve load on node-b and protect flow-1 first.",
-                "Temporarily reroute traffic away from link-ab.",
-            ],
-            "target_objects": ["node-b", "flow-1", "link-ab"],
-            "control_reasoning": "node-b is the best mitigation target and flow-1 has the highest business priority.",
-        },
+        "intermediate_fact_set": IntermediateFactSet.from_agent_outputs({"performance_agent": [fact]}),
+        "network_state": NetworkState(
+            state_id="S_k",
+            status="degraded",
+            summary="Wireless access segment is degraded.",
+            key_fact_ids=["performance-1"],
+            confidence=0.82,
+        ),
+        "cause_set": CauseSet(
+            cause_set_id="C_k",
+            primary_cause="Wireless channel degradation on c_wifi_ap1",
+            causes=["interference_increase"],
+            evidence_fact_ids=["performance-1"],
+            confidence=0.8,
+        ),
+        "optimization_action": OptimizationAction(
+            action_id="U_k",
+            recommended_action="Reduce load on c_wifi_ap1 and protect video traffic.",
+            target_object_ids=["c_wifi_ap1", "sta1"],
+            candidate_actions=["adjust wireless channel", "rate-limit low-priority traffic"],
+            reasoning="Cause set points to wireless interference.",
+            confidence=0.78,
+        ),
     }
 
 
-def test_format_report_contains_required_sections_in_order() -> None:
+def test_report_contains_picture_pipeline_sections_in_order() -> None:
     from semantic_net_cli.reporting.formatter import format_report
 
     report = format_report(make_final_result())
 
-    input_index = report.index("Input Summary")
-    global_index = report.index("Global Semantic State")
-    root_index = report.index("Semantic Root-Cause Diagnosis")
-    control_index = report.index("Closed-Loop Semantic Control")
-
-    assert input_index < global_index < root_index < control_index
-    assert "snapshot_id: demo-001" in report
-    assert "status: abnormal" in report
-    assert "Primary fault domain is aggregation-node overload at node-b." in report
-    assert "Relieve load on node-b and protect flow-1 first." in report
+    assert report.index("Input Summary") < report.index("Intermediate Semantic Fact Set")
+    assert report.index("Intermediate Semantic Fact Set") < report.index("Current Network State S_k")
+    assert report.index("Current Network State S_k") < report.index("Cause Set C_k")
+    assert report.index("Cause Set C_k") < report.index("Optimization Action U_k")
 
 
-def test_format_report_includes_concrete_evidence_and_targets() -> None:
+def test_report_includes_fact_counts_and_task_output_fields() -> None:
     from semantic_net_cli.reporting.formatter import format_report
 
     report = format_report(make_final_result())
 
-    assert "- node-b: aggregation node is overloaded" in report
-    assert "- link-ab: degradation appears downstream of node-b" in report
-    assert "target_objects: node-b, flow-1, link-ab" in report
+    assert "object_count: 6" in report
+    assert "performance_fact_count: 1" in report
+    assert "status: degraded" in report
+    assert "primary_cause: Wireless channel degradation on c_wifi_ap1" in report
+    assert "target_object_ids: c_wifi_ap1, sta1" in report
