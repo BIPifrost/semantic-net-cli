@@ -33,13 +33,13 @@ def test_llm_client_forwards_payload_to_transport() -> None:
 
     client = LLMClient(transport=transport)
     response = client.invoke(
-        agent_name="link_quality",
+        agent_name="performance_agent",
         settings=make_settings(),
         system_prompt="system",
         user_prompt="user",
     )
 
-    assert captured["agent_name"] == "link_quality"
+    assert captured["agent_name"] == "performance_agent"
     assert captured["model"] == "deepseek-v4-flash"
     assert captured["api_format"] == "openai"
     assert captured["system_prompt"] == "system"
@@ -78,7 +78,7 @@ def test_llm_client_default_transport_uses_openai_compatible_request(monkeypatch
 
     client = LLMClient()
     response = client.invoke(
-        agent_name="link_quality",
+        agent_name="performance_agent",
         settings=make_settings(),
         system_prompt="system",
         user_prompt="user",
@@ -100,7 +100,7 @@ def test_llm_client_default_transport_rejects_unsupported_api_format() -> None:
 
     try:
         client.invoke(
-            agent_name="link_quality",
+            agent_name="performance_agent",
             settings=settings,
             system_prompt="system",
             user_prompt="user",

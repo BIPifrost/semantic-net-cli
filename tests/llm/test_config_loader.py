@@ -10,7 +10,7 @@ from semantic_net_cli.llm.config_loader import LLMConfigLoader
 def test_config_loader_reads_global_defaults() -> None:
     path = Path(__file__).resolve().parents[2] / "config" / "llm_config.example.json"
     loader = LLMConfigLoader(path)
-    settings = loader.resolve("topology_dependency")
+    settings = loader.resolve("topology_agent")
 
     assert settings.provider == "your_provider"
     assert settings.api_format == "openai"
@@ -27,7 +27,7 @@ def test_config_loader_reads_global_defaults() -> None:
 def test_config_loader_applies_agent_overrides() -> None:
     path = Path(__file__).resolve().parents[2] / "config" / "llm_config.example.json"
     loader = LLMConfigLoader(path)
-    settings = loader.resolve("link_quality")
+    settings = loader.resolve("performance_agent")
 
     assert settings.model == "your_model_name"
     assert settings.temperature == 0.2

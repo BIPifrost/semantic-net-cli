@@ -13,13 +13,13 @@
     "response_format": "json_object"
   },
   "agents": {
-    "topology_dependency": {},
-    "link_quality": {},
-    "routing_forwarding": {},
-    "node_bottleneck": {},
-    "flow_impact": {},
-    "global_state": {},
-    "fault_domain": {},
-    "closed_loop_control": {}
+    "topology_agent": {},
+    "routing_agent": {},
+    "traffic_agent": {},
+    "performance_agent": {},
+    "node_semantic_agent": {},
+    "understanding_agent": {},
+    "analysis_agent": {},
+    "optimization_agent": {}
   }
 }
