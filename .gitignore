@@ -13,6 +13,7 @@ env/
 
 # Local workspaces / tool state
 .claude/
+.worktrees/
 
 # Local configuration
 config/llm_config.local.json
