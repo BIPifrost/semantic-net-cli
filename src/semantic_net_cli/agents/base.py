@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from typing import Any
 
 from semantic_net_cli.llm.client import LLMClient
 from semantic_net_cli.models.agent_output import AgentOutput
+from semantic_net_cli.models.facts import SemanticFact
 from semantic_net_cli.models.schema import SemanticSnapshot
 
 
@@ -36,3 +38,15 @@ class WorkflowAgent(BaseAgent):
         prior_results: dict[str, AgentOutput],
     ) -> AgentOutput:
         raise NotImplementedError("Concrete agents must implement run().")
+
+
+def parse_fact_response(raw_response: Any) -> list[SemanticFact]:
+    """Parse a front-layer LLM response into semantic facts."""
+
+    content = (
+        raw_response["content"]
+        if isinstance(raw_response, dict) and "content" in raw_response
+        else raw_response
+    )
+    payload = json.loads(content) if isinstance(content, str) else content
+    return [SemanticFact.model_validate(item) for item in payload.get("facts", [])]
