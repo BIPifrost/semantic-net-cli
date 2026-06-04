@@ -29,6 +29,7 @@ Thumbs.db
 # Local planning / private docs
 plan.md
 project_spec.md
+docs/superpowers/
 
 # Packaging artifacts
 *.egg-info/
