@@ -6,7 +6,7 @@
     "api_key": "your_api_key",
     "base_url": "https://your-llm-endpoint.example.com",
     "temperature": 0.2,
-    "max_tokens": 1200,
+    "max_tokens": 10000,
     "thinking_enabled": false,
     "reasoning_effort": null,
     "stream": false,
