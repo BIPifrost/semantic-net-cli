@@ -9,6 +9,7 @@ from pathlib import Path
 from semantic_net_cli.control.loop import run_control_loop
 from semantic_net_cli.io.jsonl_loader import load_twin_graph_jsonl
 from semantic_net_cli.io.jsonl_writer import write_twin_graph_jsonl
+from semantic_net_cli.llm.output_parser import AgentOutputParseError
 from semantic_net_cli.reporting.result_logger import ResultLogger
 from semantic_net_cli.workflow.graph import build_workflow
 
@@ -46,6 +47,14 @@ def main(argv: list[str] | None = None) -> int:
             write_twin_graph_jsonl(loop_result["final_graph"], Path(args.updated_graph_output))
             print(f"Updated semantic twin graph written: {args.updated_graph_output}")
         return 0
+    except AgentOutputParseError as exc:
+        print(f"Workflow execution failed: {exc}", file=sys.stderr)
+        print(
+            f"Raw LLM output saved under: {Path(args.result_dir) / '<run-timestamp>' / 'debug' / 'raw_llm_outputs'}",
+            file=sys.stderr,
+        )
+        print("Relative debug path: debug/raw_llm_outputs", file=sys.stderr)
+        return 3
     except Exception as exc:
         print(f"Workflow execution failed: {exc}", file=sys.stderr)
         return 3

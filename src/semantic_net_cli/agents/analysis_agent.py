@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from semantic_net_cli.llm.config_loader import AgentLLMSettings
+from semantic_net_cli.llm.output_parser import parse_agent_json_output
 from semantic_net_cli.llm.prompts import build_system_prompt, build_user_prompt
 from semantic_net_cli.models.facts import IntermediateFactSet
 from semantic_net_cli.models.task_outputs import CauseSet, NetworkState
@@ -28,5 +28,5 @@ class AnalysisAgent:
             system_prompt=build_system_prompt(self.name),
             user_prompt=build_user_prompt(self.name, context),
         )
-        payload = json.loads(response["content"])
+        payload = parse_agent_json_output(self.name, response)
         return CauseSet.model_validate(payload)

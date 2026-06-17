@@ -1,5 +1,6 @@
 from semantic_net_cli.control.loop import run_control_loop
 from semantic_net_cli.control.stability import StabilityMonitor
+from semantic_net_cli.llm.output_parser import AgentOutputParseError
 from semantic_net_cli.models.control import ControlExecutionRecord
 from semantic_net_cli.models.facts import IntermediateFactSet
 from semantic_net_cli.models.task_outputs import CauseSet, NetworkState, OptimizationAction
@@ -171,3 +172,31 @@ def test_control_loop_enters_damped_mode_for_oscillation(tmp_path) -> None:
 
     assert result["iteration_summaries"][-1]["stability"] == "damped"
     assert result["iteration_summaries"][-1]["damping_factor"] == 0.5
+
+
+def test_control_loop_saves_raw_llm_output_when_agent_json_parse_fails(tmp_path) -> None:
+    raw_content = '{"summary": "unterminated'
+
+    class FailingWorkflow:
+        def invoke(self, state: dict) -> dict:
+            raise AgentOutputParseError(
+                agent_name="analysis_agent",
+                raw_content=raw_content,
+                parse_error="Unterminated string starting at: line 1 column 13",
+            )
+
+    logger = ResultLogger(base_dir=tmp_path, timestamp_provider=lambda: "20260617-120000")
+
+    try:
+        run_control_loop(
+            workflow=FailingWorkflow(),
+            initial_graph=make_graph(),
+            max_iterations=3,
+            logger=logger,
+        )
+    except AgentOutputParseError:
+        pass
+
+    debug_dir = tmp_path / "20260617-120000" / "debug" / "raw_llm_outputs" / "iteration_001"
+    assert (debug_dir / "analysis_agent.txt").read_text(encoding="utf-8") == raw_content
+    assert "Unterminated string" in (debug_dir / "parse_error.json").read_text(encoding="utf-8")

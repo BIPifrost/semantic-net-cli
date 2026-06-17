@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from semantic_net_cli.llm.output_parser import AgentOutputParseError
 from semantic_net_cli.models.control import ControlExecutionRecord
 from semantic_net_cli.models.facts import IntermediateFactSet, SemanticFact
 from semantic_net_cli.models.task_outputs import CauseSet, NetworkState, OptimizationAction
@@ -251,3 +252,39 @@ def test_cli_runs_configured_iteration_count_and_writes_result_dir(monkeypatch, 
     assert (run_dirs[0] / "iteration_001" / "report.txt").exists()
     assert (run_dirs[0] / "iteration_002" / "topology_changes.json").exists()
     assert (run_dirs[0] / "final_graph.jsonl").exists()
+
+
+def test_cli_reports_agent_name_for_bad_llm_json(monkeypatch, tmp_path, capsys) -> None:
+    from semantic_net_cli import cli
+
+    snapshot_path = tmp_path / "network.jsonl"
+    snapshot_path.write_text(
+        '{"id":"c_wifi_ap1","type":"channel:wifi","attributes":{},"relations":{},"actions":[]}',
+        encoding="utf-8",
+    )
+    config_path = write_config(tmp_path)
+
+    class FailingWorkflow:
+        def invoke(self, state: dict) -> dict:
+            raise AgentOutputParseError(
+                agent_name="analysis_agent",
+                raw_content='{"summary": "unterminated',
+                parse_error="Unterminated string starting at: line 1 column 13",
+            )
+
+    monkeypatch.setattr(cli, "build_workflow", lambda config_path: FailingWorkflow())
+
+    exit_code = cli.main(
+        [
+            str(snapshot_path),
+            "--config",
+            str(config_path),
+            "--result-dir",
+            str(tmp_path / "result"),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 3
+    assert "agent=analysis_agent" in captured.err
+    assert "debug/raw_llm_outputs" in captured.err

@@ -11,6 +11,7 @@ from semantic_net_cli.control.feedback import (
     build_history_context_from_twin_graph,
 )
 from semantic_net_cli.control.stability import StabilityMonitor
+from semantic_net_cli.llm.output_parser import AgentOutputParseError
 from semantic_net_cli.models.twin import SemanticTwinGraph
 from semantic_net_cli.reporting.formatter import format_report
 from semantic_net_cli.reporting.result_logger import ResultLogger
@@ -39,12 +40,22 @@ def run_control_loop(
     iteration_summaries: list[dict[str, Any]] = []
 
     for iteration_index in range(1, max_iterations + 1):
-        result = workflow.invoke(
-            {
-                "twin_graph": current_graph,
-                "history_context": history_context,
-            }
-        )
+        try:
+            result = workflow.invoke(
+                {
+                    "twin_graph": current_graph,
+                    "history_context": history_context,
+                }
+            )
+        except AgentOutputParseError as exc:
+            logger.write_agent_parse_error(
+                run_dir=run_dir,
+                iteration_index=iteration_index,
+                agent_name=exc.agent_name,
+                raw_content=exc.raw_content,
+                parse_error=exc.parse_error,
+            )
+            raise
         preliminary_changes = build_topology_change_set(current_graph, result["updated_twin_graph"])
         assessment = monitor.assess(
             iteration=iteration_index,

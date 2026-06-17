@@ -79,6 +79,29 @@ class ResultLogger:
         _write_json(run_dir / "run_summary.json", summary)
         write_twin_graph_jsonl(final_graph, run_dir / "final_graph.jsonl")
 
+    def write_agent_parse_error(
+        self,
+        *,
+        run_dir: Path,
+        iteration_index: int,
+        agent_name: str,
+        raw_content: str,
+        parse_error: str,
+    ) -> Path:
+        debug_dir = run_dir / "debug" / "raw_llm_outputs" / f"iteration_{iteration_index:03d}"
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        (debug_dir / f"{agent_name}.txt").write_text(raw_content, encoding="utf-8")
+        _write_json(
+            debug_dir / "parse_error.json",
+            {
+                "iteration": iteration_index,
+                "agent_name": agent_name,
+                "raw_output_file": f"{agent_name}.txt",
+                "parse_error": parse_error,
+            },
+        )
+        return debug_dir
+
 
 def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

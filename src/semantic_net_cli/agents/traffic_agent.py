@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from semantic_net_cli.agents.base import parse_fact_response
+from semantic_net_cli.llm.output_parser import parse_agent_json_output
 from semantic_net_cli.llm.config_loader import AgentLLMSettings
 from semantic_net_cli.llm.prompts import build_system_prompt, build_user_prompt
 from semantic_net_cli.models.facts import SemanticFact
@@ -36,4 +36,5 @@ class TrafficAgent:
             system_prompt=build_system_prompt(self.name),
             user_prompt=build_user_prompt(self.name, context),
         )
-        return parse_fact_response(response)
+        payload = parse_agent_json_output(self.name, response)
+        return [SemanticFact.model_validate(item) for item in payload.get("facts", [])]
