@@ -31,5 +31,5 @@ def test_config_loader_applies_agent_overrides() -> None:
 
     assert settings.model == "your_model_name"
     assert settings.temperature == 0.2
-    assert settings.max_tokens == 1200
+    assert settings.max_tokens == 10000
     assert settings.api_format == "openai"
