@@ -14,6 +14,8 @@ G_k JSONL 语义孪生输入
 -> 分析智能体 C_k
 -> 优化智能体 U_k
 -> 模拟控制动作执行
+-> 稳定性评估与阻尼模式选择
+-> 关系感知的控制效果传播
 -> 反馈更新后的语义孪生图 G_k+1
 -> CLI 摘要和结果文件
 ```
@@ -32,7 +34,11 @@ G_k JSONL 语义孪生输入
 - `analysis_agent` 输出 `C_k`
 - `optimization_agent` 输出 `U_k`
 
-控制执行阶段采用模拟执行。本原型会把结构化反馈记录追加到目标孪生对象的 `actions[]` 和 `attributes.control_feedback` 中。本版只记录指标观测，不传播某个指标变化对其他关联指标的影响。前层 5 个分视角智能体本版仍然串行执行；并行化留作后续版本评估。
+控制执行阶段采用模拟执行。本原型会把结构化反馈记录追加到目标孪生对象的 `actions[]` 和 `attributes.control_feedback` 中，也会把确定性、有边界约束的指标影响传播到目标对象及其关系相连对象的 `attributes.metrics` 中。前层 5 个分视角智能体本版仍然串行执行；并行化留作后续版本评估。
+
+控制效果传播会保守地更新耦合指标。以无线信道调整为例，原型可能降低丢包率和重传率，提高 SNR 和吞吐量，并降低相关信道/接口对象上的时延与利用率。所有效果都有边界约束，并支持阻尼系数。
+
+闭环包含稳定性监控。如果出现 A-B-A-B 震荡模式，下一次匹配迭代会进入阻尼模式；如果阻尼后仍然震荡，循环会停止并记录 `terminal_reason=oscillation_persisted_after_damping`。如果网络在配置窗口内保持正常稳定态，循环会停止并记录 `terminal_reason=stable_state_reached`。
 
 ## 输入契约
 
@@ -100,9 +106,10 @@ Closed-Loop Run Summary
 run_dir: result/20260607-120000
 iteration_count: 3
 
-[1/3] S_k=degraded | C_k=wireless degradation | U_k=adjust channel | execution=succeeded | changed_objects=1
+[1/3] S_k=degraded | C_k=wireless degradation | U_k=adjust channel | execution=succeeded | stability=improving | changed_objects=1
 
 final_graph: result/20260607-120000/final_graph.jsonl
+terminal_reason: stable_state_reached
 ```
 
 每轮详细结果写入 `result/<运行时间>/iteration_001/`：
@@ -113,6 +120,8 @@ final_graph: result/20260607-120000/final_graph.jsonl
 - `cause_set.json`
 - `optimization_action.json`
 - `control_execution.json`
+- `effect_propagation.json`
+- `stability_assessment.json`
 - `topology_changes.json`
 - `updated_graph.jsonl`
 - `report.txt`
@@ -125,7 +134,9 @@ final_graph: result/20260607-120000/final_graph.jsonl
 4. `Cause Set C_k`
 5. `Optimization Action U_k`
 6. `Control Action Execution`
-7. `Feedback To Semantic Twin G_k+1`
+7. `Control Effect Propagation`
+8. `Loop Stability Assessment`
+9. `Feedback To Semantic Twin G_k+1`
 
 本原型不会执行真实网络设备控制。
 

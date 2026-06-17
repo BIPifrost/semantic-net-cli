@@ -14,6 +14,8 @@ G_k JSONL semantic twin input
 -> Analysis Agent C_k
 -> Optimization Agent U_k
 -> simulated control execution
+-> stability assessment and damped-mode selection
+-> relation-aware control effect propagation
 -> feedback-updated semantic twin graph G_k+1
 -> CLI summary and result artifacts
 ```
@@ -32,7 +34,11 @@ Back-layer task agents run strictly in series:
 - `analysis_agent` produces `C_k`
 - `optimization_agent` produces `U_k`
 
-Control execution is simulated. The prototype appends structured feedback records to target twin objects as `actions[]` and `attributes.control_feedback`. It records metric observations, but this version does not propagate one metric change into other related metrics. The five front-layer agents remain serial in this version; parallel front-layer execution is reserved for future evaluation.
+Control execution is simulated. The prototype appends structured feedback records to target twin objects as `actions[]` and `attributes.control_feedback`. It also propagates deterministic, bounded metric effects into `attributes.metrics` for target and relation-connected twin objects. The five front-layer agents remain serial in this version; parallel front-layer execution is reserved for future evaluation.
+
+Control effect propagation updates coupled metrics conservatively. For wireless channel adjustment, the prototype may reduce loss and retransmission, increase SNR and throughput, and reduce delay/utilization on related channel/interface objects. Effects are bounded and can be damped.
+
+The loop includes stability monitoring. If an A-B-A-B oscillation pattern appears, the next matching iteration enters damped mode. If oscillation persists after damping, the loop stops with `terminal_reason=oscillation_persisted_after_damping`. If the graph reaches a stable normal state for the configured window, the loop stops with `terminal_reason=stable_state_reached`.
 
 ## Input Contract
 
@@ -100,9 +106,10 @@ Closed-Loop Run Summary
 run_dir: result/20260607-120000
 iteration_count: 3
 
-[1/3] S_k=degraded | C_k=wireless degradation | U_k=adjust channel | execution=succeeded | changed_objects=1
+[1/3] S_k=degraded | C_k=wireless degradation | U_k=adjust channel | execution=succeeded | stability=improving | changed_objects=1
 
 final_graph: result/20260607-120000/final_graph.jsonl
+terminal_reason: stable_state_reached
 ```
 
 Detailed per-iteration artifacts are written under `result/<run-timestamp>/iteration_001/`:
@@ -113,6 +120,8 @@ Detailed per-iteration artifacts are written under `result/<run-timestamp>/itera
 - `cause_set.json`
 - `optimization_action.json`
 - `control_execution.json`
+- `effect_propagation.json`
+- `stability_assessment.json`
 - `topology_changes.json`
 - `updated_graph.jsonl`
 - `report.txt`
@@ -125,7 +134,9 @@ Each `report.txt` contains these sections in order:
 4. `Cause Set C_k`
 5. `Optimization Action U_k`
 6. `Control Action Execution`
-7. `Feedback To Semantic Twin G_k+1`
+7. `Control Effect Propagation`
+8. `Loop Stability Assessment`
+9. `Feedback To Semantic Twin G_k+1`
 
 The prototype does not execute real network device changes.
 
