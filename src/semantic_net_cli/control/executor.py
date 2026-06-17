@@ -18,10 +18,11 @@ class SimulatedControlExecutor:
         self,
         action: OptimizationAction,
         graph: SemanticTwinGraph,
+        mode: str = "normal",
     ) -> ControlExecutionRecord:
         target_ids = list(action.target_object_ids)
         applied_actions = list(action.candidate_actions) or [action.recommended_action]
-        status = "succeeded" if target_ids else "skipped"
+        status = "skipped" if not target_ids else "damped" if mode == "damped" else "succeeded"
         observations = self._build_metric_observations(target_ids, graph)
         target_summary = ", ".join(target_ids) if target_ids else "no target objects"
 

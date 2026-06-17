@@ -56,3 +56,18 @@ def test_simulated_executor_skips_when_action_has_no_targets() -> None:
 
     assert record.status == "skipped"
     assert record.applied_actions == ["No safe target."]
+
+
+def test_simulated_executor_marks_damped_status_when_requested() -> None:
+    action = OptimizationAction(
+        action_id="U_k",
+        recommended_action="Adjust wireless channel.",
+        target_object_ids=["c_wifi_ap1"],
+        candidate_actions=["adjust wireless channel"],
+        reasoning="Interference detected.",
+        confidence=0.78,
+    )
+
+    record = SimulatedControlExecutor().execute(action, make_graph(), mode="damped")
+
+    assert record.status == "damped"

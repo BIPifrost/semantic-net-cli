@@ -180,7 +180,7 @@ def test_cli_writes_updated_graph_when_output_path_is_provided(monkeypatch, tmp_
 
     snapshot_path = tmp_path / "network.jsonl"
     snapshot_path.write_text(
-        '{"id":"r1","type":"node:router","attributes":{},"relations":{},"actions":[]}',
+        '{"id":"c_wifi_ap1","type":"channel:wifi","attributes":{},"relations":{},"actions":[]}',
         encoding="utf-8",
     )
     config_path = write_config(tmp_path)
@@ -216,7 +216,7 @@ def test_cli_runs_configured_iteration_count_and_writes_result_dir(monkeypatch, 
 
     snapshot_path = tmp_path / "network.jsonl"
     snapshot_path.write_text(
-        '{"id":"r1","type":"node:router","attributes":{},"relations":{},"actions":[]}',
+        '{"id":"c_wifi_ap1","type":"channel:wifi","attributes":{},"relations":{},"actions":[]}',
         encoding="utf-8",
     )
     config_path = write_config(tmp_path)
@@ -244,6 +244,8 @@ def test_cli_runs_configured_iteration_count_and_writes_result_dir(monkeypatch, 
     assert exit_code == 0
     assert "Closed-Loop Run Summary" in captured.out
     assert "iteration_count: 2" in captured.out
+    assert "stability=" in captured.out
+    assert "terminal_reason:" in captured.out
     run_dirs = list(result_dir.iterdir())
     assert len(run_dirs) == 1
     assert (run_dirs[0] / "iteration_001" / "report.txt").exists()

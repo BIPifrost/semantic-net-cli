@@ -102,10 +102,12 @@ def _print_loop_summary(loop_result: dict) -> None:
             f"C_k={item['primary_cause']} | "
             f"U_k={item['recommended_action']} | "
             f"execution={item['execution_status']} | "
+            f"stability={item.get('stability', 'unknown')} | "
             f"changed_objects={item['changed_object_count']}"
         )
     print()
     print(f"final_graph: {loop_result['run_dir'] / 'final_graph.jsonl'}")
+    print(f"terminal_reason: {loop_result.get('terminal_reason', 'unknown')}")
 
 
 if __name__ == "__main__":
