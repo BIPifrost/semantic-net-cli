@@ -54,6 +54,16 @@ class ResultLogger:
             iteration_dir / "control_execution.json",
             result["control_execution"].model_dump(),
         )
+        if "propagated_effect" in result:
+            _write_json(
+                iteration_dir / "effect_propagation.json",
+                result["propagated_effect"].model_dump(),
+            )
+        if "stability_assessment" in result:
+            _write_json(
+                iteration_dir / "stability_assessment.json",
+                result["stability_assessment"].model_dump(),
+            )
         _write_json(iteration_dir / "topology_changes.json", topology_changes)
         write_twin_graph_jsonl(result["updated_twin_graph"], iteration_dir / "updated_graph.jsonl")
         (iteration_dir / "report.txt").write_text(report_text, encoding="utf-8")
