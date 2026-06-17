@@ -106,6 +106,46 @@ def build_control_execution_section(final_result: dict) -> str:
     return "\n".join(lines)
 
 
+def build_effect_propagation_section(final_result: dict) -> str:
+    """Build the Control Effect Propagation section."""
+
+    effect = final_result.get("propagated_effect")
+    if effect is None:
+        return "Control Effect Propagation\nnone"
+    return "\n".join(
+        [
+            "Control Effect Propagation",
+            f"effect_id: {effect.effect_id}",
+            f"source_execution_id: {effect.source_execution_id}",
+            f"propagation_mode: {effect.mode}",
+            f"changed_object_ids: {_join_or_none(effect.changed_object_ids)}",
+            f"metric_update_count: {len(effect.metric_updates)}",
+            f"propagation_summary: {effect.propagation_summary}",
+        ]
+    )
+
+
+def build_stability_assessment_section(final_result: dict) -> str:
+    """Build the Loop Stability Assessment section."""
+
+    assessment = final_result.get("stability_assessment")
+    if assessment is None:
+        return "Loop Stability Assessment\nnone"
+    return "\n".join(
+        [
+            "Loop Stability Assessment",
+            f"iteration: {assessment.iteration}",
+            f"stability: {assessment.stability}",
+            f"terminal_reason: {assessment.terminal_reason or 'none'}",
+            f"should_stop: {assessment.should_stop}",
+            f"damping_factor: {assessment.damping_factor}",
+            f"oscillation_count: {assessment.oscillation_count}",
+            f"signature: {assessment.signature}",
+            f"rationale: {assessment.rationale}",
+        ]
+    )
+
+
 def build_feedback_section(final_result: dict) -> str:
     """Build the Feedback To Semantic Twin G_k+1 section."""
 

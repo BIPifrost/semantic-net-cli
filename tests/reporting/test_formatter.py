@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from semantic_net_cli.models.control import ControlExecutionRecord
+from semantic_net_cli.models.control import (
+    ControlExecutionRecord,
+    PropagatedControlEffect,
+    StabilityAssessment,
+)
 from semantic_net_cli.models.facts import IntermediateFactSet, SemanticFact
 from semantic_net_cli.models.task_outputs import CauseSet, NetworkState, OptimizationAction
 from semantic_net_cli.models.twin import SemanticTwinGraph, TwinAction
@@ -57,6 +61,24 @@ def make_final_result() -> dict:
             applied_actions=["adjust wireless channel", "rate-limit low-priority traffic"],
             feedback_summary="Simulated execution succeeded for c_wifi_ap1, sta1.",
             confidence=0.78,
+        ),
+        "propagated_effect": PropagatedControlEffect(
+            effect_id="effect-exec-U_k",
+            source_execution_id="exec-U_k",
+            mode="normal",
+            changed_object_ids=["c_wifi_ap1"],
+            metric_updates=[],
+            propagation_summary="Applied normal propagation.",
+        ),
+        "stability_assessment": StabilityAssessment(
+            iteration=1,
+            stability="improving",
+            terminal_reason=None,
+            should_stop=False,
+            damping_factor=1.0,
+            oscillation_count=0,
+            signature="degraded|wireless degradation|adjust channel|c_wifi_ap1",
+            rationale="No oscillation.",
         ),
         "updated_twin_graph": SemanticTwinGraph.model_validate(
             {
@@ -120,3 +142,15 @@ def test_report_includes_closed_loop_execution_feedback() -> None:
     assert "execution_status: succeeded" in report
     assert "updated_object_count: 1" in report
     assert "next_history_action_count: 1" in report
+
+
+def test_report_includes_propagation_and_stability() -> None:
+    from semantic_net_cli.reporting.formatter import format_report
+
+    report = format_report(make_final_result())
+
+    assert "Control Effect Propagation" in report
+    assert "effect_id: effect-exec-U_k" in report
+    assert "propagation_mode: normal" in report
+    assert "Loop Stability Assessment" in report
+    assert "stability: improving" in report

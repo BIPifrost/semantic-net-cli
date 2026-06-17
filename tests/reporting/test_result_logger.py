@@ -1,6 +1,10 @@
 import json
 
-from semantic_net_cli.models.control import ControlExecutionRecord
+from semantic_net_cli.models.control import (
+    ControlExecutionRecord,
+    PropagatedControlEffect,
+    StabilityAssessment,
+)
 from semantic_net_cli.models.facts import IntermediateFactSet
 from semantic_net_cli.models.task_outputs import CauseSet, NetworkState, OptimizationAction
 from semantic_net_cli.models.twin import SemanticTwinGraph
@@ -38,6 +42,24 @@ def make_result() -> dict:
             feedback_summary="accepted",
             confidence=0.8,
         ),
+        "propagated_effect": PropagatedControlEffect(
+            effect_id="effect-exec-U_k",
+            source_execution_id="exec-U_k",
+            mode="normal",
+            changed_object_ids=["c_wifi_ap1"],
+            metric_updates=[],
+            propagation_summary="Applied normal propagation.",
+        ),
+        "stability_assessment": StabilityAssessment(
+            iteration=1,
+            stability="improving",
+            terminal_reason=None,
+            should_stop=False,
+            damping_factor=1.0,
+            oscillation_count=0,
+            signature="degraded|wireless degradation|adjust channel|c_wifi_ap1",
+            rationale="No oscillation.",
+        ),
         "updated_twin_graph": make_graph(),
         "next_history_context": {"action_count": 1, "recent_actions": []},
     }
@@ -64,6 +86,8 @@ def test_result_logger_writes_iteration_outputs_and_topology_changes(tmp_path) -
     assert (iteration_dir / "cause_set.json").exists()
     assert (iteration_dir / "optimization_action.json").exists()
     assert (iteration_dir / "control_execution.json").exists()
+    assert (iteration_dir / "effect_propagation.json").exists()
+    assert (iteration_dir / "stability_assessment.json").exists()
     assert (iteration_dir / "topology_changes.json").exists()
     assert (iteration_dir / "updated_graph.jsonl").exists()
     assert (iteration_dir / "report.txt").read_text(encoding="utf-8") == "iteration report"
