@@ -2,7 +2,12 @@ from semantic_net_cli.control.feedback import (
     apply_control_feedback_to_twin_graph,
     build_history_context_from_twin_graph,
 )
-from semantic_net_cli.models.control import ControlExecutionRecord, MetricObservation
+from semantic_net_cli.models.control import (
+    ControlExecutionRecord,
+    MetricObservation,
+    MetricUpdate,
+    PropagatedControlEffect,
+)
 from semantic_net_cli.models.twin import SemanticTwinGraph
 
 
@@ -82,3 +87,30 @@ def test_build_history_context_collects_action_records() -> None:
     assert context["action_count"] == 1
     assert context["recent_actions"][0]["action_id"] == "exec-U_k"
     assert context["recent_actions"][0]["object_id"] == "c_wifi_ap1"
+
+
+def test_apply_feedback_writes_propagated_metric_updates() -> None:
+    graph = make_graph()
+    effect = PropagatedControlEffect(
+        effect_id="effect-exec-U_k",
+        source_execution_id="exec-U_k",
+        mode="normal",
+        changed_object_ids=["c_wifi_ap1"],
+        metric_updates=[
+            MetricUpdate(
+                object_id="c_wifi_ap1",
+                metric_name="loss_rate",
+                before=0.014,
+                after=0.01148,
+                reason="direct action effect",
+            )
+        ],
+        propagation_summary="Applied normal propagation.",
+    )
+
+    updated = apply_control_feedback_to_twin_graph(graph, make_record(), effect)
+
+    target = updated.by_id["c_wifi_ap1"]
+    assert target.attributes["metrics"]["loss_rate"] == 0.01148
+    assert target.attributes["control_feedback"]["propagation_mode"] == "normal"
+    assert target.attributes["control_feedback"]["effect_id"] == "effect-exec-U_k"
