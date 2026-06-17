@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from semantic_net_cli.reporting.sections import (
     build_cause_set_section,
+    build_control_execution_section,
+    build_feedback_section,
     build_input_summary_section,
     build_intermediate_fact_set_section,
     build_network_state_section,
@@ -20,5 +22,7 @@ def format_report(final_result: dict) -> str:
         build_network_state_section(final_result),
         build_cause_set_section(final_result),
         build_optimization_action_section(final_result),
+        build_control_execution_section(final_result),
+        build_feedback_section(final_result),
     ]
     return "\n\n".join(sections)

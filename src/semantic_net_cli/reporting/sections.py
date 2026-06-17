@@ -88,6 +88,43 @@ def build_optimization_action_section(final_result: dict) -> str:
     return "\n".join(lines)
 
 
+def build_control_execution_section(final_result: dict) -> str:
+    """Build the Control Action Execution section."""
+
+    execution = final_result["control_execution"]
+    lines = [
+        "Control Action Execution",
+        f"execution_id: {execution.execution_id}",
+        f"source_action_id: {execution.source_action_id}",
+        f"executor: {execution.executor}",
+        f"execution_status: {execution.status}",
+        f"target_object_ids: {_join_or_none(execution.target_object_ids)}",
+        f"applied_actions: {_join_or_none(execution.applied_actions, separator=' | ')}",
+        f"feedback_summary: {execution.feedback_summary}",
+        f"confidence: {execution.confidence}",
+    ]
+    return "\n".join(lines)
+
+
+def build_feedback_section(final_result: dict) -> str:
+    """Build the Feedback To Semantic Twin G_k+1 section."""
+
+    updated_graph = final_result["updated_twin_graph"]
+    next_history_context = final_result["next_history_context"]
+    lines = [
+        "Feedback To Semantic Twin G_k+1",
+        f"updated_object_count: {len(updated_graph.objects)}",
+        f"next_history_action_count: {next_history_context.get('action_count', 0)}",
+        "feedback_targets:",
+    ]
+    execution = final_result["control_execution"]
+    if not execution.target_object_ids:
+        lines.append("- none")
+    for target_id in execution.target_object_ids:
+        lines.append(f"- {target_id}")
+    return "\n".join(lines)
+
+
 def _join_or_none(items: list[Any], separator: str = ", ") -> str:
     if not items:
         return "none"

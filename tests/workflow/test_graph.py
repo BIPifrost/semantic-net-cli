@@ -112,3 +112,7 @@ def test_workflow_runs_picture_architecture_in_order() -> None:
     assert result["network_state"].state_id == "S_k"
     assert result["cause_set"].cause_set_id == "C_k"
     assert result["optimization_action"].action_id == "U_k"
+    assert result["control_execution"].execution_id == "exec-U_k"
+    assert result["control_execution"].status == "succeeded"
+    assert result["updated_twin_graph"].by_id["c_wifi_ap1"].actions[0].action_id == "exec-U_k"
+    assert result["next_history_context"]["action_count"] == 1

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from semantic_net_cli.models.control import ControlExecutionRecord
 from semantic_net_cli.models.facts import IntermediateFactSet, SemanticFact
 from semantic_net_cli.models.task_outputs import CauseSet, NetworkState, OptimizationAction
+from semantic_net_cli.models.twin import SemanticTwinGraph, TwinAction
 
 
 def make_final_result() -> dict:
@@ -46,6 +48,41 @@ def make_final_result() -> dict:
             reasoning="Cause set points to wireless interference.",
             confidence=0.78,
         ),
+        "control_execution": ControlExecutionRecord(
+            execution_id="exec-U_k",
+            source_action_id="U_k",
+            executor="simulated_control_executor",
+            status="succeeded",
+            target_object_ids=["c_wifi_ap1", "sta1"],
+            applied_actions=["adjust wireless channel", "rate-limit low-priority traffic"],
+            feedback_summary="Simulated execution succeeded for c_wifi_ap1, sta1.",
+            confidence=0.78,
+        ),
+        "updated_twin_graph": SemanticTwinGraph.model_validate(
+            {
+                "objects": [
+                    {
+                        "id": "c_wifi_ap1",
+                        "type": "channel:wifi",
+                        "attributes": {"status": "degraded"},
+                        "relations": {},
+                        "actions": [
+                            TwinAction(
+                                action_id="exec-U_k",
+                                action_type="control_execution",
+                                status="succeeded",
+                                reason="adjust wireless channel",
+                                result="Simulated execution succeeded for c_wifi_ap1, sta1.",
+                            ).model_dump()
+                        ],
+                    }
+                ]
+            }
+        ),
+        "next_history_context": {
+            "action_count": 1,
+            "recent_actions": [{"action_id": "exec-U_k", "object_id": "c_wifi_ap1"}],
+        },
     }
 
 
@@ -70,3 +107,16 @@ def test_report_includes_fact_counts_and_task_output_fields() -> None:
     assert "status: degraded" in report
     assert "primary_cause: Wireless channel degradation on c_wifi_ap1" in report
     assert "target_object_ids: c_wifi_ap1, sta1" in report
+
+
+def test_report_includes_closed_loop_execution_feedback() -> None:
+    from semantic_net_cli.reporting.formatter import format_report
+
+    report = format_report(make_final_result())
+
+    assert report.index("Optimization Action U_k") < report.index("Control Action Execution")
+    assert report.index("Control Action Execution") < report.index("Feedback To Semantic Twin G_k+1")
+    assert "execution_id: exec-U_k" in report
+    assert "execution_status: succeeded" in report
+    assert "updated_object_count: 1" in report
+    assert "next_history_action_count: 1" in report

@@ -1,6 +1,6 @@
 # Semantic Network Analysis CLI Prototype
 
-This repository is a command-line prototype for semantic twin network analysis. It accepts a UTF-8 JSONL semantic twin graph, runs a two-layer LangGraph workflow, and prints a terminal-readable report with intermediate facts, current state, causes, and recommended optimization actions.
+This repository is a command-line prototype for semantic twin network analysis. It accepts a UTF-8 JSONL semantic twin graph, runs a two-layer LangGraph workflow, simulates closed-loop control execution, writes feedback into the semantic twin graph, and prints a compact terminal summary.
 
 ## Workflow
 
@@ -13,7 +13,9 @@ G_k JSONL semantic twin input
 -> Understanding Agent S_k
 -> Analysis Agent C_k
 -> Optimization Agent U_k
--> CLI report
+-> simulated control execution
+-> feedback-updated semantic twin graph G_k+1
+-> CLI summary and result artifacts
 ```
 
 Front-layer agents only extract intermediate facts:
@@ -29,6 +31,8 @@ Back-layer task agents run strictly in series:
 - `understanding_agent` produces `S_k`
 - `analysis_agent` produces `C_k`
 - `optimization_agent` produces `U_k`
+
+Control execution is simulated. The prototype appends structured feedback records to target twin objects as `actions[]` and `attributes.control_feedback`. It records metric observations, but this version does not propagate one metric change into other related metrics. The five front-layer agents remain serial in this version; parallel front-layer execution is reserved for future evaluation.
 
 ## Input Contract
 
@@ -74,6 +78,12 @@ After editable install:
 semantic-net-cli sample_data\semantic_twin_hybrid.jsonl --config config\llm_config.local.json
 ```
 
+Run multiple closed-loop iterations and write the final updated graph:
+
+```powershell
+semantic-net-cli sample_data\semantic_twin_hybrid.jsonl --config config\llm_config.local.json --max-iterations 3 --result-dir result --updated-graph-output sample_data\semantic_twin_hybrid.next.jsonl
+```
+
 From source:
 
 ```powershell
@@ -83,15 +93,41 @@ python -m semantic_net_cli.cli sample_data/semantic_twin_hybrid.jsonl --config c
 
 ## Output
 
-The report prints these sections in order:
+The terminal prints a compact closed-loop summary:
+
+```text
+Closed-Loop Run Summary
+run_dir: result/20260607-120000
+iteration_count: 3
+
+[1/3] S_k=degraded | C_k=wireless degradation | U_k=adjust channel | execution=succeeded | changed_objects=1
+
+final_graph: result/20260607-120000/final_graph.jsonl
+```
+
+Detailed per-iteration artifacts are written under `result/<run-timestamp>/iteration_001/`:
+
+- `input_graph.jsonl`
+- `intermediate_fact_set.json`
+- `network_state.json`
+- `cause_set.json`
+- `optimization_action.json`
+- `control_execution.json`
+- `topology_changes.json`
+- `updated_graph.jsonl`
+- `report.txt`
+
+Each `report.txt` contains these sections in order:
 
 1. `Input Summary`
 2. `Intermediate Semantic Fact Set`
 3. `Current Network State S_k`
 4. `Cause Set C_k`
 5. `Optimization Action U_k`
+6. `Control Action Execution`
+7. `Feedback To Semantic Twin G_k+1`
 
-`Optimization Action U_k` is a recommendation only. The prototype does not execute real network control.
+The prototype does not execute real network device changes.
 
 ## Testing
 

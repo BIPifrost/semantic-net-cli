@@ -6,6 +6,11 @@ from typing import Any, Callable
 
 from langgraph.graph import END, StateGraph
 
+from semantic_net_cli.control.executor import SimulatedControlExecutor
+from semantic_net_cli.control.feedback import (
+    apply_control_feedback_to_twin_graph,
+    build_history_context_from_twin_graph,
+)
 from semantic_net_cli.agents.analysis_agent import AnalysisAgent
 from semantic_net_cli.agents.node_semantic_agent import NodeSemanticAgent
 from semantic_net_cli.agents.optimization_agent import OptimizationAgent
@@ -30,15 +35,22 @@ AGENT_ORDER = [
     "understanding_agent",
     "analysis_agent",
     "optimization_agent",
+    "execute_control",
+    "apply_feedback",
 ]
 
 
-def build_workflow(config_path: str, llm_client: LLMClient | None = None) -> Any:
+def build_workflow(
+    config_path: str,
+    llm_client: LLMClient | None = None,
+    control_executor: SimulatedControlExecutor | None = None,
+) -> Any:
     """Build and compile the fixed-order two-layer LangGraph workflow."""
 
     loader = LLMConfigLoader(config_path)
     loader.load()
     client = llm_client or LLMClient()
+    executor = control_executor or SimulatedControlExecutor()
     graph = StateGraph(WorkflowState)
 
     graph.add_node("prepare", _prepare_initial_state)
@@ -91,6 +103,8 @@ def build_workflow(config_path: str, llm_client: LLMClient | None = None) -> Any
             OptimizationAgent(llm_client=client, settings=loader.resolve("optimization_agent"))
         ),
     )
+    graph.add_node("execute_control", _make_execute_control_node(executor))
+    graph.add_node("apply_feedback", _apply_feedback)
     graph.add_node("finalize", _finalize_state)
 
     graph.set_entry_point("prepare")
@@ -103,7 +117,9 @@ def build_workflow(config_path: str, llm_client: LLMClient | None = None) -> Any
     graph.add_edge("aggregate_facts", "understanding_agent")
     graph.add_edge("understanding_agent", "analysis_agent")
     graph.add_edge("analysis_agent", "optimization_agent")
-    graph.add_edge("optimization_agent", "finalize")
+    graph.add_edge("optimization_agent", "execute_control")
+    graph.add_edge("execute_control", "apply_feedback")
+    graph.add_edge("apply_feedback", "finalize")
     graph.add_edge("finalize", END)
 
     return graph.compile()
@@ -180,6 +196,31 @@ def _make_optimization_node(agent: OptimizationAgent) -> Callable[[WorkflowState
         }
 
     return node
+
+
+def _make_execute_control_node(
+    executor: SimulatedControlExecutor,
+) -> Callable[[WorkflowState], dict[str, Any]]:
+    def node(state: WorkflowState) -> dict[str, Any]:
+        return {
+            "control_execution": executor.execute(
+                state["optimization_action"],
+                state["twin_graph"],
+            )
+        }
+
+    return node
+
+
+def _apply_feedback(state: WorkflowState) -> dict[str, Any]:
+    updated_twin_graph = apply_control_feedback_to_twin_graph(
+        state["twin_graph"],
+        state["control_execution"],
+    )
+    return {
+        "updated_twin_graph": updated_twin_graph,
+        "next_history_context": build_history_context_from_twin_graph(updated_twin_graph),
+    }
 
 
 def _finalize_state(state: WorkflowState) -> dict[str, Any]:
