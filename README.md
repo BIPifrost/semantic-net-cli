@@ -1,64 +1,134 @@
-# Semantic Network Analysis CLI Prototype
+# Semantic Network Analysis CLI
 
-This repository is a command-line prototype for semantic twin network analysis. It accepts a UTF-8 JSONL semantic twin graph, runs a two-layer LangGraph workflow, simulates closed-loop control execution, writes feedback into the semantic twin graph, and prints a compact terminal summary.
+This project is a command-line prototype for semantic twin network analysis and closed-loop control feedback. It reads a UTF-8 JSONL semantic topology graph, asks a 5+3 multi-agent workflow to understand the network state, analyzes likely causes, generates optimization suggestions, simulates control execution, writes feedback into the semantic twin graph, and records each loop iteration under `result/`.
 
-## Workflow
+The prototype is designed for research and experimentation. It does not execute real network-device commands.
 
-The runtime architecture is:
+## What It Does
+
+Given a semantic twin graph `G_k`, the CLI performs this loop:
 
 ```text
-G_k JSONL semantic twin input
--> front-layer perspective agents
--> F_k^mid
--> Understanding Agent S_k
--> Analysis Agent C_k
--> Optimization Agent U_k
+G_k semantic twin graph
+-> front-layer fact extraction agents
+-> F_k^mid intermediate semantic facts
+-> understanding agent: S_k current network state
+-> analysis agent: C_k cause set
+-> optimization agent: U_k optimization suggestion
 -> simulated control execution
--> stability assessment and damped-mode selection
--> relation-aware control effect propagation
+-> control effect propagation
 -> feedback-updated semantic twin graph G_k+1
--> CLI summary and result artifacts
+-> stability assessment
+-> next iteration or stop
 ```
 
-Front-layer agents only extract intermediate facts:
+In plain terms:
 
-- `topology_agent`
-- `routing_agent`
-- `traffic_agent`
-- `performance_agent`
-- `node_semantic_agent`
+- It reads a network described as nodes, interfaces, channels, metrics, relations, and historical actions.
+- It extracts topology, routing, traffic, performance, and node-semantic facts.
+- It decides whether the network is normal or degraded.
+- It explains the likely cause of degradation.
+- It suggests a control action.
+- It simulates the action instead of touching real devices.
+- It updates the semantic twin graph with action history, metric changes, and feedback metadata.
+- It repeats for a configured number of iterations or stops early when stable or oscillating.
 
-Back-layer task agents run strictly in series:
+## Architecture
 
-- `understanding_agent` produces `S_k`
-- `analysis_agent` produces `C_k`
-- `optimization_agent` produces `U_k`
+The workflow uses a 5+3 agent structure.
 
-Control execution is simulated. The prototype appends structured feedback records to target twin objects as `actions[]` and `attributes.control_feedback`. It also propagates deterministic, bounded metric effects into `attributes.metrics` for target and relation-connected twin objects. The five front-layer agents remain serial in this version; parallel front-layer execution is reserved for future evaluation.
+### Front-Layer Agents
 
-Control effect propagation updates coupled metrics conservatively. For wireless channel adjustment, the prototype may reduce loss and retransmission, increase SNR and throughput, and reduce delay/utilization on related channel/interface objects. Effects are bounded and can be damped.
+These agents extract intermediate facts only. They do not make final decisions.
 
-The loop includes stability monitoring. If an A-B-A-B oscillation pattern appears, the next matching iteration enters damped mode. If oscillation persists after damping, the loop stops with `terminal_reason=oscillation_persisted_after_damping`. If the graph reaches a stable normal state for the configured window, the loop stops with `terminal_reason=stable_state_reached`.
+- `topology_agent`: connectivity, key links, topology changes, possible isolation.
+- `routing_agent`: routes, next hops, path availability.
+- `traffic_agent`: traffic demands, traffic concentration, hotspots.
+- `performance_agent`: delay, loss, throughput, utilization, retransmission, SNR/RSSI, queue length.
+- `node_semantic_agent`: node roles, interface status, deployment relations, action/event history.
 
-## Input Contract
+### Back-Layer Agents
 
-Input must be JSONL, not one large JSON object. Every non-empty line must be one semantic twin object with:
+These agents run after fact aggregation:
 
-- `id`
-- `type`
-- `attributes`
-- `relations`
-- `actions`
+- `understanding_agent`: produces `S_k`, the current network state.
+- `analysis_agent`: produces `C_k`, the cause set.
+- `optimization_agent`: produces `U_k`, the optimization suggestion.
 
-Allowed `type` bases are exactly:
+The current implementation runs these agents serially. Parallel front-layer execution is reserved for future evaluation.
 
-- `node:*`
-- `interface:*`
-- `channel:*`
+## Closed-Loop Control Feedback
 
-The CLI rejects standalone `path:*`, `route:*`, `transmission:*`, and `event:*` twin object types. Route/path information belongs in `relations.routes_to[].channels`; traffic demand belongs in `relations.transmits_to[]`; events and alarms belong in entity `actions[]` or status/metric changes.
+The control stage is simulated. It produces a `ControlExecutionRecord`, then applies deterministic feedback into the semantic twin graph.
+
+The feedback stage can:
+
+- append `control_execution` records to target objects' `actions[]`;
+- write `attributes.control_feedback`;
+- update coupled metrics under `attributes.metrics`;
+- propagate effects to relation-connected objects;
+- compare `G_k` and `G_k+1` and save topology/metric changes.
+
+For wireless channel adjustment, the prototype may conservatively:
+
+- reduce loss rate;
+- reduce retransmission rate;
+- increase SNR and throughput;
+- reduce delay and utilization;
+- improve connected wireless interface metrics.
+
+All metric effects are bounded and can be damped.
+
+## Stability And Damped Mode
+
+Each loop iteration receives a stability assessment:
+
+- `improving`: the loop is still changing and no oscillation was detected.
+- `stable`: the network stayed normal for the configured stability window.
+- `damped`: an A-B-A-B pattern was detected and the loop applies a smaller control effect.
+- `oscillating`: oscillation persisted after damping, so the loop stops.
+
+Typical terminal reasons:
+
+- `stable_state_reached`
+- `oscillation_persisted_after_damping`
+- `max_iterations_reached`
+
+## Main Technologies
+
+- Python 3.11+
+- LangGraph for workflow orchestration
+- OpenAI-compatible Chat Completions API for LLM calls
+- Pydantic v2 for schema validation
+- JSONL for semantic twin graph input/output
+- Pytest for automated tests
+
+The CLI package is installed as:
+
+```text
+semantic-net-cli
+```
+
+## Repository Layout
+
+```text
+config/                  LLM configuration templates
+sample_data/             Example semantic twin JSONL inputs
+src/semantic_net_cli/
+  agents/                5+3 agent implementations
+  control/               simulated execution, feedback, propagation, loop, stability
+  io/                    JSONL loading and writing
+  llm/                   LLM client, config loader, output parser
+  models/                Pydantic data models
+  reporting/             result logger and text report sections
+  workflow/              LangGraph workflow assembly
+tests/                   pytest test suite
+result/                  local runtime outputs, not source data
+```
 
 ## Installation
+
+From the repository root:
 
 ```powershell
 python -m venv .venv
@@ -66,67 +136,136 @@ python -m venv .venv
 pip install -e .[dev]
 ```
 
-## Configuration
+## LLM Configuration
 
-Copy the template and fill in your provider settings:
+Copy the example configuration:
 
 ```powershell
 Copy-Item config\llm_config.example.json config\llm_config.local.json
 ```
 
-The shared config uses a `global` section inherited by all agents. Agent-specific overrides can be added under the new 5+3 agent names.
+Then edit `config\llm_config.local.json`:
 
-## Running
+```json
+{
+  "global": {
+    "provider": "your_provider",
+    "api_format": "openai",
+    "model": "your_model_name",
+    "api_key": "your_api_key",
+    "base_url": "https://your-llm-endpoint.example.com",
+    "temperature": 0.2,
+    "max_tokens": 10000,
+    "thinking_enabled": false,
+    "reasoning_effort": null,
+    "stream": false,
+    "response_format": "json_object"
+  },
+  "agents": {
+    "topology_agent": {},
+    "routing_agent": {},
+    "traffic_agent": {},
+    "performance_agent": {},
+    "node_semantic_agent": {},
+    "understanding_agent": {},
+    "analysis_agent": {},
+    "optimization_agent": {}
+  }
+}
+```
 
-After editable install:
+`global` settings are inherited by every agent. You can override settings for a specific agent under `agents`.
+
+## Usage
+
+Run one iteration:
 
 ```powershell
 semantic-net-cli sample_data\semantic_twin_hybrid.jsonl --config config\llm_config.local.json
 ```
 
-Run multiple closed-loop iterations and write the final updated graph:
+Run up to three closed-loop iterations, write result artifacts, and export the final graph:
 
 ```powershell
 semantic-net-cli sample_data\semantic_twin_hybrid.jsonl --config config\llm_config.local.json --max-iterations 3 --result-dir result --updated-graph-output sample_data\semantic_twin_hybrid.next.jsonl
 ```
 
-From source:
+Run from source without installing the console script:
 
 ```powershell
 $env:PYTHONPATH="src"
-python -m semantic_net_cli.cli sample_data/semantic_twin_hybrid.jsonl --config config/llm_config.local.json
+python -m semantic_net_cli.cli sample_data\semantic_twin_hybrid.jsonl --config config\llm_config.local.json
 ```
 
-## Output
-
-The terminal prints a compact closed-loop summary:
+## CLI Parameters
 
 ```text
-Closed-Loop Run Summary
-run_dir: result/20260607-120000
-iteration_count: 3
-
-[1/3] S_k=degraded | C_k=wireless degradation | U_k=adjust channel | execution=succeeded | stability=improving | changed_objects=1
-
-final_graph: result/20260607-120000/final_graph.jsonl
-terminal_reason: stable_state_reached
+semantic-net-cli SNAPSHOT [--config PATH] [--updated-graph-output PATH] [--max-iterations N] [--result-dir PATH]
 ```
 
-Detailed per-iteration artifacts are written under `result/<run-timestamp>/iteration_001/`:
+- `snapshot`: required JSONL semantic twin graph path.
+- `--config`: LLM config path. Default: `config/llm_config.example.json`.
+- `--updated-graph-output`: optional final `G_k+1` JSONL output path.
+- `--max-iterations`: maximum closed-loop iterations. Default: `1`.
+- `--result-dir`: directory for timestamped run artifacts. Default: `result`.
 
-- `input_graph.jsonl`
-- `intermediate_fact_set.json`
-- `network_state.json`
-- `cause_set.json`
-- `optimization_action.json`
-- `control_execution.json`
-- `effect_propagation.json`
-- `stability_assessment.json`
-- `topology_changes.json`
-- `updated_graph.jsonl`
-- `report.txt`
+## Input Format
 
-Each `report.txt` contains these sections in order:
+Input must be JSONL. Each non-empty line must be one semantic twin object:
+
+```json
+{"id":"r1","type":"node:router","attributes":{},"relations":{},"actions":[]}
+```
+
+Each object requires:
+
+- `id`
+- `type`
+- `attributes`
+- `relations`
+- `actions`
+
+Allowed base types:
+
+- `node:*`
+- `interface:*`
+- `channel:*`
+
+Standalone `path:*`, `route:*`, `transmission:*`, and `event:*` objects are intentionally rejected. Route/path information should live inside `relations.routes_to[]`; traffic demand should live inside `relations.transmits_to[]`; events should live inside `actions[]` or status/metric fields.
+
+## Output Files
+
+Each run creates:
+
+```text
+result/<run-timestamp>/
+```
+
+Each successful iteration creates:
+
+```text
+iteration_001/
+  input_graph.jsonl
+  intermediate_fact_set.json
+  network_state.json
+  cause_set.json
+  optimization_action.json
+  control_execution.json
+  effect_propagation.json
+  stability_assessment.json
+  topology_changes.json
+  updated_graph.jsonl
+  report.txt
+```
+
+At the end of a successful run:
+
+```text
+run_summary.json
+final_graph.jsonl
+```
+
+`report.txt` is the human-readable summary. It contains:
 
 1. `Input Summary`
 2. `Intermediate Semantic Fact Set`
@@ -138,17 +277,48 @@ Each `report.txt` contains these sections in order:
 8. `Loop Stability Assessment`
 9. `Feedback To Semantic Twin G_k+1`
 
-The prototype does not execute real network device changes.
+## Debugging LLM Output
+
+If an agent returns malformed or truncated JSON, the CLI reports the failing agent name and saves the raw LLM output:
+
+```text
+Workflow execution failed: agent=performance_agent: Unterminated string ...
+Raw LLM output saved under: result\<run-timestamp>\debug\raw_llm_outputs
+Relative debug path: debug/raw_llm_outputs
+```
+
+Debug files are written under:
+
+```text
+result/<run-timestamp>/debug/raw_llm_outputs/iteration_XXX/
+  <agent_name>.txt
+  parse_error.json
+```
+
+This is useful when an LLM response is cut off before the JSON object closes. If this happens often, increase `max_tokens`, reduce requested fact volume, or split an agent into smaller tasks.
+
+## Important Notes
+
+- The project is a prototype, not a production network controller.
+- It does not run real network commands.
+- Output quality depends on the configured LLM.
+- `response_format: "json_object"` helps, but it cannot prevent truncation if the model runs out of output tokens.
+- `max_tokens` should be large enough for structured JSON output.
+- `result/` contains local run artifacts and should usually not be committed.
+- The closed-loop metric propagation model is deterministic and conservative; it is not a full physical network simulator.
 
 ## Testing
+
+Run the full test suite:
 
 ```powershell
 python -m pytest -q
 ```
 
-Focused checks:
+Common focused checks:
 
 ```powershell
-python -m pytest tests/io/test_jsonl_loader.py tests/test_cli.py -q
-python -m pytest tests/workflow/test_graph.py tests/reporting/test_formatter.py -q
+python -m pytest tests/test_cli.py -q
+python -m pytest tests/control/test_loop.py -q
+python -m pytest tests/reporting/test_formatter.py -q
 ```
